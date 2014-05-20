@@ -18,20 +18,33 @@
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
-		public function collectData($dataPage, $url) {
+		public function collectData($url) {
 			
 		}
 		
 		// Applies the crawlXpaths on each of the urls in order to get to the data page.
-		// Assumes that at the end of the crawlXpath list, we are at the page before 
-		// we need to start extracting all the data 
+		// Accumulates a list of urls that we need to use the data xPath on later on.
 		public function collectUrls($url) {
-			setCurrentUrl($url);
-			
+			setCurrentCrawlUrl($url);
+			$pageSource = file_get_contents($url);
+			$page = new DOMDocument;
+			$page->loadHTML($pageSource);
+			$xpath = new DOMXPath($page);
+			$urlToGetData = "";
+			foreach($crawlXpath as $xPathExpression) {
+				$newCrawlUrl = $xpath->query($xPathExpression);
+				// TODO: save this new url to a database
+				addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
+				// After the loop is done, the url that we need to evaulate the
+				// data xPath expression will be set to $urlToGetData.
+				$urlToGetData = $newCrawlUrl;
+			}
+			addDataUrlToDB($urlToGetData); // Must impliment this method
 		}
 		
 		
 		// Goes through seedUrl and calls collectUrls on them.
+		// To be called after setup is complete
 		public function crawl(){
 			foreach($seedUrl as $url) {
 				collectUrls($url);
@@ -49,7 +62,7 @@
 		}
 		
 		public function getTimeout() {
-			echo $this->timeout;
+			return $this->timeout;
 		}
 		
 		public function setConfigName($nConfigCame){
@@ -57,7 +70,7 @@
 		}
 		
 		public function getConfigName() {
-			echo $this->configName;
+			return $this->configName;
 		}
 		
 		public function addSeedUrl($nSeedUrl){
@@ -65,7 +78,7 @@
 		}
 		
 		public function getSeedUrl() {
-			echo $this->seedUrl;
+			return $this->seedUrl;
 		}
 		
 		public function addCrawlXpath($nCrawlXpath){
@@ -73,7 +86,7 @@
 		}
 		
 		public function getCrawlXpath() {
-			echo $this->crawlXpath;
+			return $this->crawlXpath;
 		}
 		
 		public function setDataXpath($nDataXpath){
@@ -81,9 +94,16 @@
 		}
 		
 		public function getDataXpath() {
-			echo $this->dataXpath;
+			return $this->dataXpath;
 		}
 		
+		public function setCurrentCrawlUrl($nUrl){
+			$this->currentCrawlUrl = $nUrl;
+		}
+		
+		public function getCurrentCrawlUrl() {
+			return $this->currentCrawlUrl;
+		}
 		
 	}
 ?>
