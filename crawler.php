@@ -9,12 +9,12 @@
 	*********************************************/
 			
 	class CrawlBase {
-		private $timeout = 10000;
-		private $configName = "";
-		private $seedUrl = new Array();			// Data sctructre for now. Consider switching to array lists.
-		private $crawlXpath = new Array();		// Data sctructre for now. Consider switching to array lists.
-		private $dataXpath = "";
-		private $currentCrawlUrl = "";
+		protected static $timeout = 10000;
+		protected static $configName = "";
+		protected static $seedUrl = array();			// Data sctructre for now. Consider switching to array lists.
+		protected static $crawlXpath = array();		// Data sctructre for now. Consider switching to array lists.
+		protected static $dataXpath = "";
+		protected static $currentCrawlUrl = "";
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
@@ -22,32 +22,65 @@
 			
 		}
 		
+		private function addCrawlUrlToDB($urls) {
+			foreach ($urls as $url) {
+			    echo "Adding crawl url to DB: ".$url->nodeValue."<br>";
+			}
+		}
+		
+		private function addDataUrlToDB($urls) {
+			foreach ($urls as $url) {
+			    echo "Adding data url to DB: ".$url->nodeValue."<br>";
+			}
+		}
+		
+		private function getPageHtml($url) {
+			$pageSource = file_get_contents("http://".$url);
+			var_dump($pageSource);
+			$page = new DOMDocument();
+			libxml_use_internal_errors(true);
+			$page->loadHTML($pageSource);
+			return $page;
+		}
+		
 		// Applies the crawlXpaths on each of the urls in order to get to the data page.
 		// Accumulates a list of urls that we need to use the data xPath on later on.
 		public function collectUrls($url) {
-			setCurrentCrawlUrl($url);
-			$pageSource = file_get_contents($url);
-			$page = new DOMDocument;
-			$page->loadHTML($pageSource);
-			$xpath = new DOMXPath($page);
+			$this->setCurrentCrawlUrl($url);
 			$urlToGetData = "";
-			foreach($crawlXpath as $xPathExpression) {
-				$newCrawlUrl = $xpath->query($xPathExpression);
-				// TODO: save this new url to a database
-				addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
-				// After the loop is done, the url that we need to evaulate the
-				// data xPath expression will be set to $urlToGetData.
-				$urlToGetData = $newCrawlUrl;
+			$newCrawlUrl = $url;
+			if (count(self::$crawlXpath) != 0 && self::$dataXpath != "") {
+				foreach(self::$crawlXpath as $xPathExpression) {
+					$page = $this->getPageHtml($newCrawlUrl);
+					$xpath = new DOMXPath($page);
+					$newCrawlUrl = $xpath->query($xPathExpression);
+					// TODO: save this new url to a database
+					$this->addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
+					// After the loop is done, the url that we need to evaulate the
+					// data xPath expression will be set to $urlToGetData.
+					$urlToGetData = $newCrawlUrl;
+				}
+				$this->addDataUrlToDB($urlToGetData); // Must impliment this method
+			} else if (self::$dataXpath != "") {
+				$this->setCurrentCrawlUrl($url);
+				$page = $this->getPageHtml($url);
+				$xpath = new DOMXPath($page);
+				$newDataUrl = $xpath->query($dataXpath);
+				echo($newDataUrl);
+				$this->addDataUrlToDB($newDataUrl);
+			} else {
+				echo "Data xPath not provided. Returning.";
+				return;
 			}
-			addDataUrlToDB($urlToGetData); // Must impliment this method
 		}
 		
 		
 		// Goes through seedUrl and calls collectUrls on them.
 		// To be called after setup is complete
 		public function crawl(){
-			foreach($seedUrl as $url) {
-				collectUrls($url);
+			$seedUrls = $this->getSeedUrls();
+			foreach($seedUrls as $url) {
+				$this->collectUrls($url);
 			}
 		}
 		
@@ -58,52 +91,59 @@
 		 ********************************/
 		
 		public function setTimeout($nTimeout){
-			$this->timeout = $nTimeout;
+			self::$timeout = $nTimeout;
 		}
 		
 		public function getTimeout() {
-			return $this->timeout;
+			return self::$timeout;
 		}
 		
-		public function setConfigName($nConfigCame){
-			$this->configName = $nConfigCame;
+		public function setConfigName($nConfigName){
+			self::$configName = $nConfigName;
 		}
 		
 		public function getConfigName() {
-			return $this->configName;
+			return self::$configName;
 		}
 		
 		public function addSeedUrl($nSeedUrl){
-			$this->seedUrl = $nSeedUrl;
+			array_push(self::$seedUrl, $nSeedUrl);
 		}
 		
-		public function getSeedUrl() {
-			return $this->seedUrl;
+		public function getSeedUrls() {
+			return self::$seedUrl;
 		}
 		
 		public function addCrawlXpath($nCrawlXpath){
-			$this->crawlXpath = $nCrawlXpath;
+			array_push(self::$crawlXpath, $nCrawlXpath);
 		}
 		
 		public function getCrawlXpath() {
-			return $this->crawlXpath;
+			return self::$crawlXpath;
 		}
 		
 		public function setDataXpath($nDataXpath){
-			$this->dataXpath = $nDataXpath;
+			self::$dataXpath = $nDataXpath;
 		}
 		
 		public function getDataXpath() {
-			return $this->dataXpath;
+			return self::$dataXpath;
 		}
 		
 		public function setCurrentCrawlUrl($nUrl){
-			$this->currentCrawlUrl = $nUrl;
+			self::$currentCrawlUrl = $nUrl;
 		}
 		
 		public function getCurrentCrawlUrl() {
-			return $this->currentCrawlUrl;
+			return self::$currentCrawlUrl;
 		}
 		
 	}
+	
+	$crawl = new CrawlBase();
+	$crawl->setConfigName("Test");
+	$crawl->addSeedUrl("www.reddit.com");
+	$crawl->addCrawlXpath("//p[@class='title']/a/@href");
+	$crawl->setDataXpath("//p");
+	$crawl->crawl();
 ?>
