@@ -35,8 +35,7 @@
 		}
 		
 		private function getPageHtml($url) {
-			$pageSource = file_get_contents("http://".$url);
-			var_dump($pageSource);
+			$pageSource = file_get_contents("http://".$url); // replace with curl in the furute.
 			$page = new DOMDocument();
 			libxml_use_internal_errors(true);
 			$page->loadHTML($pageSource);
