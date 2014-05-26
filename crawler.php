@@ -15,6 +15,7 @@
 		protected static $crawlXpath = array();		// Data sctructre for now. Consider switching to array lists.
 		protected static $dataXpath = "";
 		protected static $currentCrawlUrl = "";
+		protected static $baseUrl = "";
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
@@ -35,9 +36,13 @@
 		}
 		
 		private function standardizeUrl($url) {
-			print_r($url);
 			if(!strpos($url, "/", 0)) {
-				return self::$seedUrl.$url;
+				if(!strpos($url, "http://")) {
+					return "http://".self::$baseUrl.$url;
+				} else {
+					return self::$baseUrl.$url;
+				}
+					
 			} else {
 				return $url;
 			}
@@ -146,10 +151,19 @@
 			return self::$currentCrawlUrl;
 		}
 		
+		public function setBaseUrl($nUrl){
+			self::$baseUrl = $nUrl;
+		}
+		
+		public function getBaseUrl() {
+			return self::$baseUrl;
+		}
+		
 	}
 	
 	$crawl = new CrawlBase();
 	$crawl->setConfigName("Test");
+	$crawl->setBaseUrl("www.reddit.com");
 	$crawl->addSeedUrl("www.reddit.com");
 	$crawl->addCrawlXpath("//p[@class='title']/a/@href");
 	$crawl->setDataXpath("//p");
