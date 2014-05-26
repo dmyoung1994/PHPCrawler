@@ -24,13 +24,22 @@
 		
 		private function addCrawlUrlToDB($urls) {
 			foreach ($urls as $url) {
-			    echo "Adding crawl url to DB: ".$url->nodeValue."<br>";
+			    echo "Adding crawl url to DB: ".$this->standardizeUrl($url->nodeValue)."<br>";
 			}
 		}
 		
 		private function addDataUrlToDB($urls) {
 			foreach ($urls as $url) {
-			    echo "Adding data url to DB: ".$url->nodeValue."<br>";
+			    echo "Adding data url to DB: ".$this->standardizeUrl($url->nodeValue)."<br>";
+			}
+		}
+		
+		private function standardizeUrl($url) {
+			print_r($url);
+			if(!strpos($url, "/", 0)) {
+				return self::$seedUrl.$url;
+			} else {
+				return $url;
 			}
 		}
 		
