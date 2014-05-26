@@ -24,18 +24,20 @@
 		}
 		
 		private function addCrawlUrlToDB($urls) {
-			foreach ($urls as $url) {
-			    echo "Adding crawl url to DB: ".$this->standardizeUrl($url->nodeValue)."<br>";
-			}
+			echo "Adding crawl url to DB: ".$this->normalizeUrl($url->nodeValue)."<br>";
 		}
 		
 		private function addDataUrlToDB($urls) {
-			foreach ($urls as $url) {
-			    echo "Adding data url to DB: ".$this->standardizeUrl($url->nodeValue)."<br>";
-			}
+			echo "Adding data url to DB: ".$this->normalizeUrl($url->nodeValue)."<br>";
 		}
 		
-		private function standardizeUrl($url) {
+		private function xPathEvalSingle($xml, $xpathExpression) {
+			$xpathEval = new DOMXPath($xml);
+			$resultsFromXpath = $xpathEval->query($xPathExpression);
+			return $resultsFromXpath[0];
+		}
+		
+		private function normalizeUrl($url) {
 			if(!strpos($url, "/", 0)) {
 				if(!strpos($url, "http://")) {
 					return "http://".self::$baseUrl.$url;
@@ -49,7 +51,8 @@
 		}
 		
 		private function getPageHtml($url) {
-			$pageSource = file_get_contents("http://".$url); // replace with curl in the furute.
+			$normalizedUrl = $this->normalizeUrl($url);
+			$pageSource = file_get_contents($normalizedUrl); // replace with curl in the furute.
 			$page = new DOMDocument();
 			libxml_use_internal_errors(true);
 			$page->loadHTML($pageSource);
@@ -65,14 +68,17 @@
 			if (count(self::$crawlXpath) != 0 && self::$dataXpath != "") {
 				foreach(self::$crawlXpath as $xPathExpression) {
 					$page = $this->getPageHtml($newCrawlUrl);
-					$xpath = new DOMXPath($page);
-					$newCrawlUrl = $xpath->query($xPathExpression);
+					$newCrawlUrl = $this->xPathEvalSingle($page, $xPathExpression);
 					// TODO: save this new url to a database
 					$this->addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
 					// After the loop is done, the url that we need to evaulate the
 					// data xPath expression will be set to $urlToGetData.
+					echo $newCrawlUrl."</br>";
 					$urlToGetData = $newCrawlUrl;
+					$this->collectUrls($urlToGetData);
 				}
+				// This is where we will crawl the last pages to get urls for data pages.
+				
 				$this->addDataUrlToDB($urlToGetData); // Must impliment this method
 			} else if (self::$dataXpath != "") {
 				$this->setCurrentCrawlUrl($url);
@@ -161,11 +167,14 @@
 		
 	}
 	
+	// Crawl urls will get all pages contain data pages.
+	// The data xpath will have to pull up all of those crawl pages, and then evaluate the data xpath on all those pages.
+	
 	$crawl = new CrawlBase();
 	$crawl->setConfigName("Test");
-	$crawl->setBaseUrl("www.reddit.com");
-	$crawl->addSeedUrl("www.reddit.com");
-	$crawl->addCrawlXpath("//p[@class='title']/a/@href");
+	$crawl->setBaseUrl("http://ziggyscycle.ca");
+	$crawl->addSeedUrl("http://ziggyscycle.ca/product-list/bikes-1000/");
+	$crawl->addCrawlXpath("//div[@class='seresultspagination']/a[@class='senextbatch']/@href");
 	$crawl->setDataXpath("//p");
 	$crawl->crawl();
 ?>
