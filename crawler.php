@@ -31,7 +31,7 @@
 			echo "Adding data url to DB: ".$this->normalizeUrl($url)."<br>";
 		}
 		
-		private function xPathEvalSingle($soruce, $xpathExpression) {
+		private function xPathEvalSingle($source, $xpathExpression) {
 			$resultsFromXpath = $source->evaluate($xPathExpression)->item(0)->textContent;
 			return $resultsFromXpath;
 		}
