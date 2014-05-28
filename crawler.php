@@ -23,41 +23,41 @@
 			
 		}
 		
-		private function addCrawlUrlToDB($urls) {
-			echo "Adding crawl url to DB: ".$this->normalizeUrl($url->nodeValue)."<br>";
+		private function addCrawlUrlToDB($url) {
+			echo "Adding crawl url to DB: ".$this->normalizeUrl($url)."<br>";
 		}
 		
-		private function addDataUrlToDB($urls) {
-			echo "Adding data url to DB: ".$this->normalizeUrl($url->nodeValue)."<br>";
+		private function addDataUrlToDB($url) {
+			echo "Adding data url to DB: ".$this->normalizeUrl($url)."<br>";
 		}
 		
-		private function xPathEvalSingle($xml, $xpathExpression) {
-			$xpathEval = new DOMXPath($xml);
-			$resultsFromXpath = $xpathEval->query($xPathExpression);
-			return $resultsFromXpath[0];
+		private function xPathEvalSingle($soruce, $xpathExpression) {
+			$resultsFromXpath = $source->evaluate($xPathExpression)->item(0)->textContent;
+			return $resultsFromXpath;
 		}
 		
 		private function normalizeUrl($url) {
-			if(!strpos($url, "/", 0)) {
-				if(!strpos($url, "http://")) {
-					return "http://".self::$baseUrl.$url;
-				} else {
-					return self::$baseUrl.$url;
-				}
-					
-			} else {
-				return $url;
+			$returnUrl = $url;
+			
+			if(!strpos($url, "/")) {
+				$returnUrl = self::$baseUrl.$url;	
 			}
+			if(strpos($url, "http://")) {
+				$returnUrl = "http://".$url;
+			}
+			return $returnUrl;
 		}
 		
 		private function getPageHtml($url) {
 			$normalizedUrl = $this->normalizeUrl($url);
-			$pageSource = file_get_contents($normalizedUrl); // replace with curl in the furute.
 			$page = new DOMDocument();
+			$page->strictErrorChecking = false;
 			libxml_use_internal_errors(true);
-			$page->loadHTML($pageSource);
+			$page->loadHTMLFile($normalizedUrl);
 			return $page;
 		}
+		
+		
 		
 		// Applies the crawlXpaths on each of the urls in order to get to the data page.
 		// Accumulates a list of urls that we need to use the data xPath on later on.
@@ -68,12 +68,13 @@
 			if (count(self::$crawlXpath) != 0 && self::$dataXpath != "") {
 				foreach(self::$crawlXpath as $xPathExpression) {
 					$page = $this->getPageHtml($newCrawlUrl);
-					$newCrawlUrl = $this->xPathEvalSingle($page, $xPathExpression);
+					$source = new DOMXPath($page);
+					//$newCrawlUrl = $source->evaluate($xPathExpression)->item(0)->textContent;
+					$newCrawlUrl = $this->xPathEvalSingle($source, $xPathExpression);
 					// TODO: save this new url to a database
 					$this->addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
 					// After the loop is done, the url that we need to evaulate the
 					// data xPath expression will be set to $urlToGetData.
-					echo $newCrawlUrl."</br>";
 					$urlToGetData = $newCrawlUrl;
 					$this->collectUrls($urlToGetData);
 				}
@@ -172,9 +173,9 @@
 	
 	$crawl = new CrawlBase();
 	$crawl->setConfigName("Test");
-	$crawl->setBaseUrl("http://ziggyscycle.ca");
-	$crawl->addSeedUrl("http://ziggyscycle.ca/product-list/bikes-1000/");
-	$crawl->addCrawlXpath("//div[@class='seresultspagination']/a[@class='senextbatch']/@href");
+	$crawl->setBaseUrl("http://reddit.com");
+	$crawl->addSeedUrl("http://reddit.com");
+	$crawl->addCrawlXpath("//span[@class='nextprev']/a[contains(@rel, 'next')]/@href");
 	$crawl->setDataXpath("//p");
 	$crawl->crawl();
 ?>
