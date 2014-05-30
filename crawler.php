@@ -1,5 +1,5 @@
 <?php
-	
+	require_once("DBConnect.php");
 	/********************************************
 		
 		The CrawlBase class is the base class 
@@ -16,6 +16,8 @@
 		protected static $dataXpath = "";
 		protected static $currentCrawlUrl = "";
 		protected static $baseUrl = "";
+		protected static $saveToDB = true;
+		protected static $saveToObject = false;
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
@@ -57,8 +59,6 @@
 			return $page;
 		}
 		
-		
-		
 		// Applies the crawlXpaths on each of the urls in order to get to the data page.
 		// Accumulates a list of urls that we need to use the data xPath on later on.
 		public function collectUrls($url) {
@@ -93,7 +93,6 @@
 				return;
 			}
 		}
-		
 		
 		// Goes through seedUrl and calls collectUrls on them.
 		// To be called after setup is complete
@@ -164,6 +163,16 @@
 		
 		public function getBaseUrl() {
 			return self::$baseUrl;
+		}
+		
+		public function saveToDB() {
+			self::$saveToObject = false;
+			self::$saveToDB = true;
+		}
+		
+		public function saveToObject() {
+			self::$saveToDB = false;
+			self::$saveToObject = true;
 		}
 		
 	}

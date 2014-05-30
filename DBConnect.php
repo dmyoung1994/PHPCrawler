@@ -4,6 +4,7 @@
 		protected static $DBUser = "";
 		protected static $DBPass = "";
 		protected static $db;
+		private static $schema = "";
 		
 		// Constructor method that sets all necessary variables 
 		// without the need for user getters/setters
