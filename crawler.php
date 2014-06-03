@@ -1,5 +1,5 @@
 <?php
-	require_once("DBConnect.php");
+	//require_once("DBConnect.php");
 	/********************************************
 		
 		The CrawlBase class is the base class 
@@ -16,8 +16,10 @@
 		protected static $dataXpath = "";
 		protected static $currentCrawlUrl = "";
 		protected static $baseUrl = "";
-		protected static $saveToDB = true;
-		protected static $saveToObject = false;
+		protected static $saveToDB = false;
+		protected static $saveToObject = true;
+		protected static $crawlUrls = array();
+		protected static $dataUrls = array();
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
@@ -27,10 +29,20 @@
 		
 		private function addCrawlUrlToDB($url) {
 			echo "Adding crawl url to DB: ".$this->normalizeUrl($url)."<br>";
+			if(self::$saveToObject) {
+				array_push(self::$crawlUrls, $url);
+			} else if (self::$saveToDB) {
+				// TODO: Impliment this.
+			}
 		}
 		
 		private function addDataUrlToDB($url) {
 			echo "Adding data url to DB: ".$this->normalizeUrl($url)."<br>";
+			if(self::$saveToObject) {
+				array_push(self::$dataUrls, $url);
+			} else if (self::$saveToDB) {
+				// TODO: Impliment this.
+			}
 		}
 		
 		private function xPathEvalSingle($source, $xpathExpression) {

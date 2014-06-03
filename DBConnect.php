@@ -51,6 +51,6 @@
 	}
 	
 	// Tests
-	$db = new DBConnect("mysql:host=localhost;dbname=database", "root", "root");
+	//$db = new DBConnect("mysql:host=localhost;dbname=database", "root", "root");
 	
 ?>
