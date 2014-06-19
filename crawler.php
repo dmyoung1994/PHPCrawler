@@ -11,15 +11,17 @@
 	class CrawlBase {
 		protected static $timeout = 10000;
 		protected static $configName = "";
-		protected static $seedUrl = array();			// Data sctructre for now. Consider switching to array lists.
+		protected static $seedUrls = array();			// Data sctructre for now. Consider switching to array lists.
 		protected static $crawlXpath = array();		// Data sctructre for now. Consider switching to array lists.
 		protected static $dataXpath = "";
 		protected static $currentCrawlUrl = "";
 		protected static $baseUrl = "";
 		protected static $saveToDB = false;
 		protected static $saveToObject = true;
-		protected static $crawlUrls = array();
+		protected static $urlStorage = array();
 		protected static $dataUrls = array();
+		protected static $urlsToCrawl = array();
+		protected static $crawledUrls = array();
 		
 		// This function will be overwritten by the user to specify what data 
 		// they want to collect when the crawl is run.
@@ -30,7 +32,7 @@
 		private function addCrawlUrlToDB($url) {
 			echo "Adding crawl url to DB: ".$this->normalizeUrl($url)."<br>";
 			if(self::$saveToObject) {
-				array_push(self::$crawlUrls, $url);
+				array_push(self::$urlStorage, $url);
 			} else if (self::$saveToDB) {
 				// TODO: Impliment this.
 			}
@@ -52,7 +54,6 @@
 		
 		private function normalizeUrl($url) {
 			$returnUrl = $url;
-			
 			if(!strpos($url, "/")) {
 				$returnUrl = self::$baseUrl.$url;	
 			}
@@ -73,46 +74,47 @@
 		
 		// Applies the crawlXpaths on each of the urls in order to get to the data page.
 		// Accumulates a list of urls that we need to use the data xPath on later on.
-		public function collectUrls($url) {
-			$this->setCurrentCrawlUrl($url);
-			$urlToGetData = "";
-			$newCrawlUrl = $url;
+		public function collectUrls() {
+			$this->addUrlsToCrawlArray(self::$seedUrls);
 			if (count(self::$crawlXpath) != 0 && self::$dataXpath != "") {
-				foreach(self::$crawlXpath as $xPathExpression) {
-					$page = $this->getPageHtml($newCrawlUrl);
-					$source = new DOMXPath($page);
-					//$newCrawlUrl = $source->evaluate($xPathExpression)->item(0)->textContent;
-					$newCrawlUrl = $this->xPathEvalSingle($source, $xPathExpression);
-					// TODO: save this new url to a database
-					$this->addCrawlUrlToDB($newCrawlUrl); // Must impliment this method
-					// After the loop is done, the url that we need to evaulate the
-					// data xPath expression will be set to $urlToGetData.
-					$urlToGetData = $newCrawlUrl;
-					$this->collectUrls($urlToGetData);
-				}
-				// This is where we will crawl the last pages to get urls for data pages.
-				
-				$this->addDataUrlToDB($urlToGetData); // Must impliment this method
-			} else if (self::$dataXpath != "") {
-				$this->setCurrentCrawlUrl($url);
-				$page = $this->getPageHtml($url);
-				$xpath = new DOMXPath($page);
-				$newDataUrl = $xpath->query($dataXpath);
-				echo($newDataUrl);
-				$this->addDataUrlToDB($newDataUrl);
+				$length = count(self::$crawlXpath);
+				for($i=0; $i<$length; $i++) {
+					$crawlXpathToUse = self::$crawlXpath[$i];
+					$urlsToCrawlThisRun = self::$urlsToCrawl[$i];
+					$crawledUrlsThisRun = array();
+					foreach ($urlsToCrawlThisRun as $url) {
+						echo("Crawling: ". $url."<br>");
+						$xml = $this->getPageHtml($url);
+						echo"have page content"."<br>";
+						$Xpath = new DOMXpath($xml);
+						echo"using xpath: ". $crawlXpathToUse."<br>";
+						$urlsFromXpathNodeList = $Xpath->evaluate($crawlXpathToUse);
+						echo"xpath evaluated.";
+						$urlsFromXpathArray = array();
+						$length = $urlsFromXpathNodeList->length;
+						for($j=0; $j<$length; $j++) {
+							array_push($urlsFromXpathArray, $urlsFromXpathNodeList->item($j)->textContent);
+							$this->addCrawlUrlToDb($urlsFromXpathNodeList->item($j)->textContent);
+						}
+						array_push(self::$urlsToCrawl, $urlsFromXpathArray);
+					}
+				} 
+			} else if (count(self::$crawlXpath) == 0 && self::$dataXpath != "") {
+			
 			} else {
 				echo "Data xPath not provided. Returning.";
 				return;
 			}
 		}
 		
+		public function addUrlsToCrawlArray($urlArray) {
+			array_push(self::$urlsToCrawl, $urlArray);
+		}
+		
 		// Goes through seedUrl and calls collectUrls on them.
 		// To be called after setup is complete
 		public function crawl(){
-			$seedUrls = $this->getSeedUrls();
-			foreach($seedUrls as $url) {
-				$this->collectUrls($url);
-			}
+			$this->collectUrls();
 		}
 		
 		/********************************
@@ -138,11 +140,11 @@
 		}
 		
 		public function addSeedUrl($nSeedUrl){
-			array_push(self::$seedUrl, $nSeedUrl);
+			array_push(self::$seedUrls, $nSeedUrl);
 		}
 		
 		public function getSeedUrls() {
-			return self::$seedUrl;
+			return self::$seedUrls;
 		}
 		
 		public function addCrawlXpath($nCrawlXpath){
@@ -194,9 +196,10 @@
 	
 	$crawl = new CrawlBase();
 	$crawl->setConfigName("Test");
-	$crawl->setBaseUrl("http://reddit.com");
-	$crawl->addSeedUrl("http://reddit.com");
-	$crawl->addCrawlXpath("//span[@class='nextprev']/a[contains(@rel, 'next')]/@href");
+	$crawl->setBaseUrl("http://oneclass.com");
+	$crawl->addSeedUrl("http://oneclass.com/sitemap/");
+	$crawl->addCrawlXpath("//loc/text()");
+	$crawl->addCrawlXpath("//loc/text()");
 	$crawl->setDataXpath("//p");
 	$crawl->crawl();
 ?>
